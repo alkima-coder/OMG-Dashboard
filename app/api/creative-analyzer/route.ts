@@ -89,6 +89,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const effectiveKey = customApiKey?.trim() || process.env.GEMINI_API_KEY?.trim() || '';
+    if (!effectiveKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Gemini API Key is required. Please submit your Gemini API Key in the Key Config section.',
+        },
+        { status: 400 }
+      );
+    }
+
     if (!Array.isArray(creatives) || creatives.length === 0) {
       return NextResponse.json(
         {

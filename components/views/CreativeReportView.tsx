@@ -365,7 +365,7 @@ export default function CreativeReportView({
   // Load saved optional custom Gemini API key from localStorage on mount
   useEffect(() => {
     try {
-      const savedKey = window.localStorage.getItem('pc_aio_gemini_api_key') || '';
+      const savedKey = window.localStorage.getItem('omg_gemini_api_key') || window.localStorage.getItem('pc_aio_gemini_api_key') || '';
       if (savedKey) setCustomGeminiKey(savedKey);
     } catch {
       // ignore storage errors
@@ -1481,6 +1481,12 @@ export default function CreativeReportView({
   }, [aiLiveCohort, aiAdTypeFilter]);
 
   const handleTriggerCohortAnalysis = async (forceRefresh = false) => {
+    if (!customGeminiKey?.trim()) {
+      setShowApiKeyConfig(true);
+      setAiFeedbackMsg('Please enter your Gemini API Key in Key Config to run AI Creative Analysis.');
+      return;
+    }
+
     if (aiLiveCohort.creatives.length === 0) {
       setAiFeedbackMsg('No active creatives in the selected Brand / Platform / Ad Type / Format / Period cohort.');
       return;
@@ -2946,12 +2952,16 @@ export default function CreativeReportView({
                         onClick={() => setShowApiKeyConfig(v => !v)}
                         title="Configure Engine API Key"
                         className={`px-2.5 py-2 rounded-md border text-xs font-bold transition-colors cursor-pointer ${
-                          isDarkMode
-                            ? 'bg-[#111827] border-slate-700 text-slate-400 hover:text-white'
-                            : 'bg-white border-slate-300 text-slate-600 hover:text-slate-900'
+                          !customGeminiKey
+                            ? isDarkMode
+                              ? 'bg-amber-950/40 border-amber-600/50 text-amber-300 hover:text-amber-200'
+                              : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                            : isDarkMode
+                              ? 'bg-[#111827] border-slate-700 text-slate-400 hover:text-white'
+                              : 'bg-white border-slate-300 text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        Key Config
+                        {customGeminiKey ? 'API Key Config' : 'Set API Key'}
                       </button>
                     </>
                   )}
@@ -3086,19 +3096,24 @@ export default function CreativeReportView({
                 <div className="text-xs space-y-0.5">
                   <p className="font-bold">Creative Learning Engine API Key</p>
                   <p className="text-slate-400">
-                    Your server is pre-configured with your API key. You can also override it here locally if needed.
+                    Submit your Gemini API Key manually to generate AI insights and creative reports.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <input
                     type="password"
-                    placeholder="Override API key (optional)..."
+                    placeholder="Enter Gemini API Key..."
                     value={customGeminiKey}
                     onChange={e => {
-                      const val = e.target.value;
+                      const val = e.target.value.trim();
                       setCustomGeminiKey(val);
                       try {
-                        window.localStorage.setItem('pc_aio_gemini_api_key', val);
+                        if (val) {
+                          window.localStorage.setItem('omg_gemini_api_key', val);
+                        } else {
+                          window.localStorage.removeItem('omg_gemini_api_key');
+                          window.localStorage.removeItem('pc_aio_gemini_api_key');
+                        }
                       } catch {
                         // ignore
                       }

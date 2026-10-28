@@ -14,7 +14,6 @@ import { resolveGoogleDriveMedia } from './gdrive-resolver';
 import { GoogleGenAI } from '@google/genai';
 
 export const GEMINI_MODEL_ID = 'gemini-3.8-flash';
-const DEFAULT_INJECTED_GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 
 export type CreativeAssetFormatType = 'Video' | 'Static' | 'Carousel';
 
@@ -918,17 +917,20 @@ export async function analyzeCreativeCohortWithGemini(
 
   const prompt = buildCreativeStrategistPrompt(cohort, selectedCreatives, videoContexts);
 
-  // Deduplicated list of API keys to try (prioritizing new working key)
+  // Deduplicated list of API keys provided by user or environment
   const candidateKeys = Array.from(
     new Set(
       [
         options?.customApiKey?.trim(),
         process.env.GEMINI_API_KEY?.trim(),
         process.env.GOOGLE_API_KEY?.trim(),
-        DEFAULT_INJECTED_GEMINI_KEY,
       ].filter((k): k is string => Boolean(k && k.length > 10))
     )
   );
+
+  if (candidateKeys.length === 0) {
+    throw new Error('Gemini API Key is missing. Please submit your Gemini API Key in Key Config.');
+  }
 
   // Prioritize gemini 3.8, 3.7, and 3.6 flash API for superior video frame and audio understanding
   // Strictly enforce Gemini 3.6 Flash or above (excluding flash-lite or legacy preview models)
@@ -945,7 +947,7 @@ export async function analyzeCreativeCohortWithGemini(
     'You are a Senior Creative Strategist for TikTok and Meta (Instagram/Facebook). For VIDEO creatives, deeply watch the video frame-by-frame across 0–6s and listen to spoken audio, outputting Verbatim Spoken/Text Hook (0–3s) and Visual Hook (0–3s). For STATIC IMAGE creatives, deeply inspect the attached image layout, typography, and visual hierarchy, outputting Verbatim Headline / Hook, Visual Execution (product arrangement, background setting, packaging, discount/pricing badges, footer banners), and Main Communication Approach. Never demand or invent spoken dialogue or video stream for static images. Format your response strictly as a concise One-Slider Report with zero emojis/icons and zero media-buying advice.';
 
   // For any top winner with large video buffer (> 10MB), upload to Gemini File API using primary key
-  const primaryApiKey = candidateKeys[0] || process.env.GEMINI_API_KEY || '';
+  const primaryApiKey = candidateKeys[0] || '';
   if (primaryApiKey) {
     for (const winner of selectedCreatives.topWinners) {
       const vc = videoContexts.find(v => v.creativeId === winner.id);
